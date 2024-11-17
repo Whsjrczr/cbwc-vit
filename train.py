@@ -14,6 +14,7 @@ import torchvision.datasets as datasets
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from args import get_args
 import models.vision_transformer as vits
+import models.vision_transformer_cbwc as vits_cbwc
 import wandb
 
 import time
@@ -21,20 +22,24 @@ import time
 
 def main():
 
-
-
     args = get_args()
 
-    model_name = str(args.arch) + '_e' + str(args.epochs) + '_bs' + str(args.batch_size) + '_lr' + str(args.lr) + '_wd' + str(args.wd) + '_wre' + str(args.warmup_epochs) + '_wk' + str(args.workers) + '_nc' + str(args.num_classes)
+    datapath = args.data_path
+    dataset = datapath.split('/')[-1]
+
+    model_name = str(args.arch) + '_' + dataset + '_e' + str(args.epochs) + '_bs' + str(args.batch_size) + '_lr' + str(args.lr) + '_wd' + str(args.weight_decay) 
+    model_name = model_name + '_wre' + str(args.warmup_epochs) + '_wk' + str(args.workers) + '_nc' + str(args.num_classes) + '_s' + str(args.seed)
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
-    np.seed(args.seed)
+    np.random.seed(args.seed)
+    torch.cuda.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
 
     wandb.init(
         project="CBWC-exp",
-        name=model_name
-        notes=str(self.cfg)
+        name=model_name,
+        notes=str(args),
         config={
             "model": args.arch,
             
@@ -46,10 +51,10 @@ def main():
             "warmup_epochs": args.warmup_epochs,
 
             "workers": args.workers,
-            "method": str('origin')
+            "method": str('origin'),
 
 
-            "seed": self.cfg.seed,
+            "seed": args.seed,
         }
     )
 
@@ -88,6 +93,8 @@ def main():
 
     # build model
     print("creating model '{}'".format(args.arch))
+
+    # model = vits_cbwc.__dict__[args.arch](num_classes=args.num_classes)
 
     model = vits.__dict__[args.arch](num_classes=args.num_classes)
 
@@ -246,7 +253,7 @@ def validate(val_loader, model, criterion, args):
 
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
-    wandb.log({"test_loss":losses.avg, "test_acc_top1": top1.avg, "test_acc_top5": top5.avg, "val_time": val_time.avg``})
+    wandb.log({"test_loss":losses.avg, "test_acc_top1": top1.avg, "test_acc_top5": top5.avg, "val_time": val_time.avg})
     return top1.avg, top5.avg   
 
 class AverageMeter(object):
