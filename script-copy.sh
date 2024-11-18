@@ -1,6 +1,6 @@
 CUDA_VISIBLE_DEVICES=0 python train.py \
  --arch vit_small \
- --m cbwc \
+ --m rms \
  --lr 1e-4 \
  --batch_size 64 \
  --wd 0.1 \

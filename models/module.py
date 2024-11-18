@@ -76,6 +76,12 @@ class CCLinear(nn.Module):
             if self.bias is not None:
                 self.update_bias()
         return F.linear(input, self.compute_weight, self.compute_bias)
+    
+    def eval(self):
+        self.update_weight()
+        if self.bias is not None:
+            self.update_bias()
+        return self.train(False)
 
     def extra_repr(self) -> str:
         return 'in_features={}, out_features={}, bias={}'.format(
@@ -137,7 +143,5 @@ class Centering(nn.Module):
         super().__init__()
         self.shape = shape
     def forward(self, x):
-        length = len(self.shape)
-        dims_to_mean = [i for i in range (-length, 0)]
-        mean = torch.mean(x, dim=dims_to_mean, keepdim=True)
+        mean = torch.mean(x, dim=-1, keepdim=True)
         return x - mean

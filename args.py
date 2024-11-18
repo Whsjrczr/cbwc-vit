@@ -6,6 +6,8 @@ def get_args():
 
     parser.add_argument('-a', '--arch', metavar='ARCH', default='vit_small',
                         help='model architecture')
+    
+    parser.add_argument('--m', '--method', type=str, default="ori", help="method on model")
 
     parser.add_argument("--data_path", type=str, default="/path/to/imagenet",
                         help="path to dataset repository")

@@ -1,4 +1,3 @@
-
 import math
 import os
 import builtins
@@ -15,9 +14,10 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from args import get_args
 import models.vision_transformer as vits
 import models.vision_transformer_cbwc as vits_cbwc
+import models.vision_transformer_rms as vits_rms
 import wandb
-
 import time
+from data import CustomDataset
 
 
 def main():
@@ -27,7 +27,7 @@ def main():
     datapath = args.data_path
     dataset = datapath.split('/')[-1]
 
-    model_name = str(args.arch) + '_' + dataset + '_e' + str(args.epochs) + '_bs' + str(args.batch_size) + '_lr' + str(args.lr) + '_wd' + str(args.weight_decay) 
+    model_name = str(args.arch) + '_' + args.m + '_' + dataset + '_e' + str(args.epochs) + '_bs' + str(args.batch_size) + '_lr' + str(args.lr) + '_wd' + str(args.weight_decay) 
     model_name = model_name + '_wre' + str(args.warmup_epochs) + '_wk' + str(args.workers) + '_nc' + str(args.num_classes) + '_s' + str(args.seed)
 
     random.seed(args.seed)
@@ -36,67 +36,54 @@ def main():
     torch.cuda.manual_seed(args.seed)
     torch.cuda.manual_seed_all(args.seed)
 
-    wandb.init(
-        project="CBWC-exp",
-        name=model_name,
-        notes=str(args),
-        config={
-            "model": args.arch,
-            
-            "epochs": args.epochs,
-            "batch_size": args.batch_size,
-
-            "learning_rate": args.lr,
-            "weight_decay": args.wd,
-            "warmup_epochs": args.warmup_epochs,
-
-            "workers": args.workers,
-            "method": str('origin'),
-
-
-            "seed": args.seed,
-        }
-    )
-
     # Data loading code
-    traindir = os.path.join(args.data_path, 'train')
-    valdir = os.path.join(args.data_path, 'val')
+    datadir = args.data_path
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
-
-    train_dataset = datasets.ImageFolder(
-        traindir,
-        transforms.Compose([
+    train_transform = transforms.Compose([
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
-        ]))
-
-    val_dataset = datasets.ImageFolder(
-        valdir, 
-        transforms.Compose([
+    ]) 
+    test_transform = transforms.Compose([
             transforms.Resize(256),
             transforms.CenterCrop(224),
             transforms.ToTensor(),
             normalize,
-        ]))
+        ])
 
-    train_loader = torch.utils.data.DataLoader(
-        train_dataset, batch_size=args.batch_size, num_workers=args.workers, 
-        pin_memory=True)
 
-    val_loader = torch.utils.data.DataLoader(
-        val_dataset, batch_size=256, 
-        num_workers=args.workers, pin_memory=True)
+    full_dataset = CustomDataset(root_dir=datadir, transform=train_transform)
+
+    train_size = int(0.8 * len(full_dataset))
+    test_size = len(full_dataset) - train_size
+
+    train_dataset, _ = torch.utils.data.random_split(full_dataset, [train_size, test_size])
+
+    full_dataset = CustomDataset(root_dir=datadir, transform=test_transform)
+    _, test_dataset = torch.utils.data.random_split(full_dataset, [train_size, test_size])
+
+
+
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.workers, 
+        pin_memory=True, shuffle=True)
+
+    val_loader = torch.utils.data.DataLoader(test_dataset, batch_size=256, num_workers=args.workers, 
+        pin_memory=True, shuffle=False)
+
     print("Building data done with {} images loaded.".format(len(train_dataset)))
 
     # build model
     print("creating model '{}'".format(args.arch))
 
-    # model = vits_cbwc.__dict__[args.arch](num_classes=args.num_classes)
+    if args.m == 'ori':
+        model = vits.__dict__[args.arch](num_classes=args.num_classes)
+    elif args.m == 'cbwc':
+        model = vits_cbwc.__dict__[args.arch](num_classes=args.num_classes)
+    elif args.m == 'rms':
+        model = vits_rms.__dict__[args.arch](num_classes=args.num_classes)
 
-    model = vits.__dict__[args.arch](num_classes=args.num_classes)
 
     args.lr = args.lr * args.batch_size  / 256
 
@@ -111,9 +98,43 @@ def main():
     print(model)
     print("Building model done.")
 
+    wandb.init(
+        project="CBWC-exp",
+        name=model_name,
+        notes=str(args),
+        config={
+            "model": args.arch,
+            "method": args.m,
+            
+            "epochs": args.epochs,
+            "batch_size": args.batch_size,
+
+            "learning_rate": args.lr,
+            "weight_decay": args.weight_decay,
+            "warmup_epochs": args.warmup_epochs,
+
+            "workers": args.workers,
+            "method": str('origin'),
+
+
+            "seed": args.seed,
+        }
+    )
+
     criterion = nn.CrossEntropyLoss().cuda()
 
     cudnn.benchmark = True
+
+    dump_path = os.path.join(args.dump_path, model_name)
+
+    if not os.path.exists(dump_path):
+        # 如果路径不存在，则创建它
+        os.makedirs(dump_path)
+        print(f"目录 {dump_path} 已创建。")
+    else:
+        print(f"目录 {dump_path} 已存在。")
+
+    print("==> Begin Training.")
 
     for epoch in range(args.epochs):
 
@@ -123,7 +144,7 @@ def main():
         # train the network
         train(train_loader, model, criterion, optimizer, epoch, args)
         scheduler.step()
-        wandb.log({"learning_rate": scheduler.get_lr()})
+        wandb.log({"learning_rate": scheduler.get_last_lr()[0]})
 
         # save checkpoints
         save_dict = {
@@ -132,9 +153,10 @@ def main():
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),
         }
+                
         torch.save(
             save_dict,
-            os.path.join(args.dump_path, "checkpoint.pth.tar"),
+            os.path.join(dump_path, "checkpoint.pth.tar"),
         )
         
         acc1, acc5 = validate(val_loader, model, criterion, args)
@@ -173,7 +195,8 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         output = model(images)
         torch.cuda.synchronize()
         fp_end = time.time()
-        fp_time.update(fp_end - fp_begin)
+        fp_time_batch = (fp_end - fp_begin) * 1e6
+        fp_time.update(fp_time_batch)
 
         loss = criterion(output, target)
 
@@ -189,7 +212,9 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         bp_begin = time.time()
         loss.backward()
         bp_end = time.time()
-        bp_time.update(bp_end - bp_begin)
+        bp_time_batch = (bp_end - bp_begin) * 1e6
+        bp_time.update(bp_time_batch)
+        wandb.log({"fp_time":fp_time_batch, "bp_time":bp_time_batch})
 
         optimizer.step()
 
@@ -203,7 +228,7 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
         end = time.time()
 
 
-    wandb.log({"train_loss":losses.avg, "train_acc_top1": top1.avg, "train_acc_top5": top5.avg, "train_epoch":epoch, "train_fp_time": fp_time.avg, "train_bp_time": bp_time.avg})
+    wandb.log({"train_loss":losses.avg, "train_acc_top1": top1.avg, "train_acc_top5": top5.avg, "train_epoch":epoch, "train_fp_avg_time": fp_time.avg, "train_bp_avg_time": bp_time.avg})
 
 def validate(val_loader, model, criterion, args):
     batch_time = AverageMeter('Time', ':6.3f')
@@ -223,9 +248,8 @@ def validate(val_loader, model, criterion, args):
         end = time.time()
         for i, (images, target) in enumerate(val_loader):
 
-            if args.device is not None:
-                images = images.cuda(args.device, non_blocking=True)
-                target = target.cuda(args.device, non_blocking=True)
+            images = images.cuda(non_blocking=True)
+            target = target.cuda(non_blocking=True)
 
             # compute output
 
@@ -234,7 +258,9 @@ def validate(val_loader, model, criterion, args):
             output = model(images)
             torch.cuda.synchronize()
             val_end = time.time()
-            val_time.update(val_end - val_begin)
+            val_time_batch = (val_end - val_begin)*1e6
+            val_time.update(val_time_batch)
+            wandb.log({"val_time":val_time_batch})
 
             loss = criterion(output, target)
 
@@ -253,7 +279,7 @@ def validate(val_loader, model, criterion, args):
 
         print(' * Acc@1 {top1.avg:.3f} Acc@5 {top5.avg:.3f}'
               .format(top1=top1, top5=top5))
-    wandb.log({"test_loss":losses.avg, "test_acc_top1": top1.avg, "test_acc_top5": top5.avg, "val_time": val_time.avg})
+    wandb.log({"test_loss":losses.avg, "test_acc_top1": top1.avg, "test_acc_top5": top5.avg, "val_avg_time": val_time.avg})
     return top1.avg, top5.avg   
 
 class AverageMeter(object):
