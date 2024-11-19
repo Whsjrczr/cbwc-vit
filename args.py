@@ -11,6 +11,9 @@ def get_args():
 
     parser.add_argument("--data_path", type=str, default="/path/to/imagenet",
                         help="path to dataset repository")
+    
+    parser.add_argument("--dump_path", type=str, default="/path/to/result",
+                    help="path to dataset repository")
 
     parser.add_argument("--epochs", default=100, type=int,
                         help="number of total epochs to run")

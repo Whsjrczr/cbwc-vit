@@ -6,4 +6,5 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
  --wd 0.1 \
  --num_classes 1000 \
  --data_path data/ImageNet \
+ --dump_path /root/result \
  --seed 1 \
