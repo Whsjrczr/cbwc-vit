@@ -5,7 +5,7 @@ from functools import partial
 import torch
 import torch.nn as nn
 
-from .module import RMSNormLayer, CCLinear, Centering
+from .module import RMSNorm, CCLinear, Centering
 
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
@@ -191,7 +191,7 @@ class VisionTransformer(nn.Module):
             trunc_normal_(m.weight, std=.02)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.LayerNorm):
+        elif isinstance(m, RMSNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
@@ -262,19 +262,19 @@ class VisionTransformer(nn.Module):
 def vit_tiny(patch_size=16, **kwargs):
     model = VisionTransformer(
         patch_size=patch_size, embed_dim=192, depth=12, num_heads=3, mlp_ratio=4,
-        qkv_bias=True, norm_layer=RMSNormLayer, **kwargs)
+        qkv_bias=True, norm_layer=RMSNorm, **kwargs)
     return model
 
 
 def vit_small(patch_size=16, **kwargs):
     model = VisionTransformer(
         patch_size=patch_size, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4,
-        qkv_bias=True, norm_layer=RMSNormLayer, **kwargs)
+        qkv_bias=True, norm_layer=RMSNorm, **kwargs)
     return model
 
 
 def vit_base(patch_size=16, **kwargs):
     model = VisionTransformer(
         patch_size=patch_size, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4,
-        qkv_bias=True, norm_layer=RMSNormLayer, **kwargs)
+        qkv_bias=True, norm_layer=RMSNorm, **kwargs)
     return model

@@ -5,7 +5,7 @@ from functools import partial
 import torch
 import torch.nn as nn
 
-from .module import RMSNorm
+from .module import RMSNorm, CCLinear, Centering
 
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
@@ -76,7 +76,7 @@ class Mlp(nn.Module):
         hidden_features = hidden_features or in_features
         self.fc1 = nn.Linear(in_features, hidden_features)
         self.act = act_layer()
-        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.fc2 = CCLinear(hidden_features, out_features)
         self.drop = nn.Dropout(drop)
 
     def forward(self, x):
@@ -97,7 +97,7 @@ class Attention(nn.Module):
 
         self.qkv = nn.Linear(dim, dim * 3, bias=qkv_bias)
         self.attn_drop = nn.Dropout(attn_drop)
-        self.proj = nn.Linear(dim, dim)
+        self.proj = CCLinear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
 
     def forward(self, x):
@@ -190,7 +190,7 @@ class VisionTransformer(nn.Module):
             trunc_normal_(m.weight, std=.02)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
-        elif isinstance(m, RMSNorm):
+        elif isinstance(m, nn.LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 

@@ -4,6 +4,7 @@ from functools import partial
 
 import torch
 import torch.nn as nn
+from .module import LayerNorm
 
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
@@ -115,7 +116,7 @@ class Attention(nn.Module):
 
 class Block(nn.Module):
     def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+                 drop_path=0., act_layer=nn.GELU, norm_layer=LayerNorm):
         super().__init__()
         self.norm1 = norm_layer(dim)
         self.attn = Attention(
@@ -156,7 +157,7 @@ class VisionTransformer(nn.Module):
     """ Vision Transformer """
     def __init__(self, img_size=[224], patch_size=16, in_chans=3, num_classes=1000, embed_dim=768, depth=12,
                  num_heads=12, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop_rate=0., attn_drop_rate=0.,
-                 drop_path_rate=0., norm_layer=nn.LayerNorm, **kwargs):
+                 drop_path_rate=0., norm_layer=LayerNorm, **kwargs):
         super().__init__()
         self.num_features = self.embed_dim = embed_dim
 
@@ -188,7 +189,7 @@ class VisionTransformer(nn.Module):
             trunc_normal_(m.weight, std=.02)
             if isinstance(m, nn.Linear) and m.bias is not None:
                 nn.init.constant_(m.bias, 0)
-        elif isinstance(m, nn.LayerNorm):
+        elif isinstance(m, LayerNorm):
             nn.init.constant_(m.bias, 0)
             nn.init.constant_(m.weight, 1.0)
 
@@ -258,19 +259,19 @@ class VisionTransformer(nn.Module):
 def vit_tiny(patch_size=16, **kwargs):
     model = VisionTransformer(
         patch_size=patch_size, embed_dim=192, depth=12, num_heads=3, mlp_ratio=4,
-        qkv_bias=True, norm_layer=nn.LayerNorm, **kwargs)
+        qkv_bias=True, norm_layer=LayerNorm, **kwargs)
     return model
 
 
 def vit_small(patch_size=16, **kwargs):
     model = VisionTransformer(
         patch_size=patch_size, embed_dim=384, depth=12, num_heads=6, mlp_ratio=4,
-        qkv_bias=True, norm_layer=nn.LayerNorm, **kwargs)
+        qkv_bias=True, norm_layer=LayerNorm, **kwargs)
     return model
 
 
 def vit_base(patch_size=16, **kwargs):
     model = VisionTransformer(
         patch_size=patch_size, embed_dim=768, depth=12, num_heads=12, mlp_ratio=4,
-        qkv_bias=True, norm_layer=nn.LayerNorm, **kwargs)
+        qkv_bias=True, norm_layer=LayerNorm, **kwargs)
     return model
