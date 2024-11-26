@@ -21,6 +21,9 @@ def get_args():
     parser.add_argument("--batch_size", default=256, type=int,
                         help="batch size per gpu, i.e. how many unique instances per gpu")
 
+    parser.add_argument("--patch_size", default=16, type=int,
+                        help="patch size")
+
     parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float,
                     metavar='LR', help='initial (base) learning rate for train', dest='lr')
     

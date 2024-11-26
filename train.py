@@ -28,7 +28,7 @@ def main():
     dataset = datapath.split('/')[-1]
 
     model_name = str(args.arch) + '_' + args.m + '_' + dataset + '_e' + str(args.epochs) + '_bs' + str(args.batch_size) + '_lr' + str(args.lr) + '_wd' + str(args.weight_decay) 
-    model_name = model_name + '_wre' + str(args.warmup_epochs) + '_wk' + str(args.workers) + '_nc' + str(args.num_classes) + '_s' + str(args.seed)
+    model_name = model_name + '_wre' + str(args.warmup_epochs) + '_wk' + str(args.workers) + '_nc' + str(args.num_classes) + '_s' + str(args.seed) + '_ps' + str(args.patch_size) 
 
     random.seed(args.seed)
     torch.manual_seed(args.seed)
@@ -78,7 +78,7 @@ def main():
     print("creating model '{}'".format(args.arch))
 
     if args.m == 'ori':
-        model = vits.__dict__[args.arch](num_classes=args.num_classes)
+        model = vits.__dict__[args.arch](num_classes=args.num_classes, patch_size=args.patch_size)
     elif args.m == 'cbwc':
         model = vits_cbwc.__dict__[args.arch](num_classes=args.num_classes)
     elif args.m == 'rms':
@@ -108,6 +108,7 @@ def main():
             
             "epochs": args.epochs,
             "batch_size": args.batch_size,
+            "patch_size": args.patch_size,
 
             "learning_rate": args.lr,
             "weight_decay": args.weight_decay,

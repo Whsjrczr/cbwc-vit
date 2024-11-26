@@ -3,8 +3,9 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
  --m rms \
  --lr 1e-4 \
  --batch_size 64 \
+ --patch_size 4 \
  --wd 0.1 \
- --num_classes 1000 \
+ --num_classes 100 \
  --data_path data/ImageNet \
  --dump_path /root/result \
  --seed 1 \
