@@ -15,6 +15,7 @@ from args import get_args
 import models.vision_transformer as vits
 import models.vision_transformer_cbwc as vits_cbwc
 import models.vision_transformer_rms as vits_rms
+import models.vision_transformer_cbwc_wc as vits_cbwc_wc
 import wandb
 import time
 from data import CustomDataset
@@ -83,6 +84,8 @@ def main():
         model = vits_cbwc.__dict__[args.arch](num_classes=args.num_classes, patch_size=args.patch_size)
     elif args.m == 'rms':
         model = vits_rms.__dict__[args.arch](num_classes=args.num_classes, patch_size=args.patch_size)
+    elif args.m == 'cbwc-wc':
+        model = vits_cbwc_wc.__dict__[args.arch](num_classes=args.num_classes, patch_size=args.patch_size)
 
 
     args.lr = args.lr * args.batch_size  / 256

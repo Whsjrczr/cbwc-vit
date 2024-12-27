@@ -5,7 +5,7 @@ from functools import partial
 import torch
 import torch.nn as nn
 
-from .module import RMSNorm, CCLinear, Centering
+from .module import RMSNorm, CCLinear
 
 def _no_grad_trunc_normal_(tensor, mean, std, a, b):
     # Cut & paste from PyTorch official master until it's in a few official releases - RW
