@@ -2,6 +2,29 @@ import os
 import torch
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms, datasets
+from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
+from timm.data import create_transform
+
+try:
+    from torchvision.transforms import InterpolationMode
+
+    def _pil_interp(method):
+        if method == 'bicubic':
+            return InterpolationMode.BICUBIC
+        elif method == 'lanczos':
+            return InterpolationMode.LANCZOS
+        elif method == 'hamming':
+            return InterpolationMode.HAMMING
+        else:
+            # default bilinear, do we want to allow nearest?
+            return InterpolationMode.BILINEAR
+
+    import timm.data.transforms as timm_transforms
+
+    timm_transforms._pil_interp = _pil_interp
+except:
+    from timm.data.transforms import _pil_interp
+
 
 class CustomDataset(Dataset):
     def __init__(self, root_dir, transform=None):
@@ -33,16 +56,13 @@ class CustomDataset(Dataset):
             image = self.transform(image)
         return image, label
 
-
 def make_dataset(root_dir, splite_rate):
     train_transform = build_transform(True)
     test_transform = build_transform(False)
-    full_dataset = CustomDataset(root_dir=root_dir, transform=train_transform)
-    train_size = int((1 - splite_rate) * len(full_dataset))
-    test_size = len(full_dataset) - train_size
-    train_dataset, _ = torch.utils.data.random_split(full_dataset, [train_size, test_size])
-    full_dataset = CustomDataset(root_dir=root_dir, transform=test_transform)
-    _, test_dataset = torch.utils.data.random_split(full_dataset, [train_size, test_size])
+    train_path = os.path.join(root_dir,"train")
+    test_path = os.path.join(root_dir,"val")
+    train_dataset = CustomDataset(root_dir=train_path, transform=train_transform)
+    test_dataset = CustomDataset(root_dir=test_path, transform=test_transform)
     return train_dataset, test_dataset
 
 
