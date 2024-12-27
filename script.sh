@@ -9,3 +9,4 @@ CUDA_VISIBLE_DEVICES=0 python train.py \
  --data_path data/ImageNet \
  --dump_path /root/result \
  --seed 1 \
+ --wandb True\

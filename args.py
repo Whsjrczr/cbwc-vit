@@ -40,4 +40,6 @@ def get_args():
     
     parser.add_argument('--seed', default=-1, type=int, help='manual seed')
 
+    parser.add_argument('--wandb', default=False, type=bool, help='wandb log')
+
     return parser.parse_args()
