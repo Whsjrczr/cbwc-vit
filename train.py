@@ -18,7 +18,7 @@ import models.vision_transformer_rms as vits_rms
 import models.vision_transformer_cbwc_wc as vits_cbwc_wc
 import wandb
 import time
-from data import CustomDataset
+from data import CustomDataset, make_dataset
 
 
 def main():
@@ -39,33 +39,8 @@ def main():
 
     # Data loading code
     datadir = args.data_path
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
-    train_transform = transforms.Compose([
-            transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),
-            transforms.ToTensor(),
-            normalize,
-    ]) 
-    test_transform = transforms.Compose([
-            transforms.Resize(256),
-            transforms.CenterCrop(224),
-            transforms.ToTensor(),
-            normalize,
-        ])
 
-
-    full_dataset = CustomDataset(root_dir=datadir, transform=train_transform)
-
-    train_size = int(0.8 * len(full_dataset))
-    test_size = len(full_dataset) - train_size
-
-    train_dataset, _ = torch.utils.data.random_split(full_dataset, [train_size, test_size])
-
-    full_dataset = CustomDataset(root_dir=datadir, transform=test_transform)
-    _, test_dataset = torch.utils.data.random_split(full_dataset, [train_size, test_size])
-
-
+    train_dataset, test_dataset = make_dataset(root_dir=datadir, splite_rate=0.2)
 
     train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, num_workers=args.workers, 
         pin_memory=True, shuffle=True)

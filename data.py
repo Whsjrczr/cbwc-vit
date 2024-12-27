@@ -33,8 +33,42 @@ class CustomDataset(Dataset):
             image = self.transform(image)
         return image, label
 
-        image = datasets.folder.default_loader(image_path)
-        label = self.labels[idx]
-        if self.transform:
-            image = self.transform(image)
-        return image, label
+
+def make_dataset(root_dir, splite_rate):
+    train_transform = build_transform(True)
+    test_transform = build_transform(False)
+    full_dataset = CustomDataset(root_dir=root_dir, transform=train_transform)
+    train_size = int((1 - splite_rate) * len(full_dataset))
+    test_size = len(full_dataset) - train_size
+    train_dataset, _ = torch.utils.data.random_split(full_dataset, [train_size, test_size])
+    full_dataset = CustomDataset(root_dir=root_dir, transform=test_transform)
+    _, test_dataset = torch.utils.data.random_split(full_dataset, [train_size, test_size])
+    return train_dataset, test_dataset
+
+
+
+def build_transform(is_train):
+    if is_train:
+        # this should always dispatch to transforms_imagenet_train
+        transform = create_transform(
+            input_size=224,
+            is_training=True,
+            color_jitter=0.4,
+            auto_augment='rand-m9-mstd0.5-inc1',
+            re_prob=0.25,
+            re_mode='pixel',
+            re_count=1,
+            interpolation='bicubic',
+        )
+
+    t = []
+    size = int((256 / 224) * 224)
+    t.append(
+        transforms.Resize(size, interpolation=_pil_interp('bicubic')),
+        # to maintain same ratio w.r.t. 224 images
+    )
+    t.append(transforms.CenterCrop(224))
+
+    t.append(transforms.ToTensor())
+    t.append(transforms.Normalize(IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD))
+    return transforms.Compose(t)
