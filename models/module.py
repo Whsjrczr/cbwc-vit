@@ -255,8 +255,20 @@ class Centering(nn.Module):
 
 
 if __name__ == '__main__':
-    x = torch.rand((2,3,4))
-    cc = Centering()
-    y = cc(x)
-    print(x.shape)
-    print(y.shape)
+    x = torch.rand((2,3,3,4))
+    linear = nn.Linear(4,5)
+    cclinear = CCLinear(4,5)
+    cclinear.weight = linear.weight
+    cclinear.bias = linear.bias
+    ln = LayerNorm(5)
+    rms = RMSNorm(5)
+    rms.weight = ln.weight
+    rms.bias = ln.bias
+    y = ln(linear(x))
+    z = rms(cclinear(x))
+    print(y-z)
+
+    # cc = Centering()
+    # y = cc(x)
+    # print(x.shape)
+    # print(y.shape)

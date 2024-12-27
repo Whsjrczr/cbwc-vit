@@ -80,9 +80,9 @@ def main():
     if args.m == 'ori':
         model = vits.__dict__[args.arch](num_classes=args.num_classes, patch_size=args.patch_size)
     elif args.m == 'cbwc':
-        model = vits_cbwc.__dict__[args.arch](num_classes=args.num_classes)
+        model = vits_cbwc.__dict__[args.arch](num_classes=args.num_classes, patch_size=args.patch_size)
     elif args.m == 'rms':
-        model = vits_rms.__dict__[args.arch](num_classes=args.num_classes)
+        model = vits_rms.__dict__[args.arch](num_classes=args.num_classes, patch_size=args.patch_size)
 
 
     args.lr = args.lr * args.batch_size  / 256
@@ -99,12 +99,13 @@ def main():
     print("Building model done.")
 
     wandb.init(
-        project="CBWC-exp",
+        project="CBWC",
         name=model_name,
         notes=str(args),
         config={
-            "model": args.arch,
+            "architecture": args.arch,
             "method": args.m,
+            "dataset": "imagenet100",
             
             "epochs": args.epochs,
             "batch_size": args.batch_size,
