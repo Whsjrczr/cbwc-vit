@@ -1,6 +1,7 @@
 import os
 import torch
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, random_split
+import random
 from torchvision import transforms, datasets
 from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from timm.data import create_transform
@@ -27,23 +28,10 @@ except:
 
 
 class CustomDataset(Dataset):
-    def __init__(self, root_dir, transform=None):
-        self.root_dir = root_dir
+    def __init__(self, transform=None):
         self.transform = transform
         self.image_paths = []
         self.labels = []
-        self._load_data()
-
-    def _load_data(self):
-        index = 0
-        for label_dir in os.listdir(self.root_dir):
-            label_dir_path = os.path.join(self.root_dir, label_dir)
-            if os.path.isdir(label_dir_path):
-                for image_name in os.listdir(label_dir_path):
-                    image_path = os.path.join(label_dir_path, image_name)
-                    self.image_paths.append(image_path)
-                    self.labels.append(index)  # 假设文件夹名即为标签
-            index += 1
 
     def __len__(self):
         return len(self.image_paths)
@@ -56,13 +44,34 @@ class CustomDataset(Dataset):
             image = self.transform(image)
         return image, label
 
+
+
 def make_dataset(root_dir, splite_rate):
     train_transform = build_transform(True)
     test_transform = build_transform(False)
-    train_path = os.path.join(root_dir,"train")
-    test_path = os.path.join(root_dir,"val")
-    train_dataset = CustomDataset(root_dir=train_path, transform=train_transform)
-    test_dataset = CustomDataset(root_dir=test_path, transform=test_transform)
+    train_dataset = CustomDataset(train_transform)
+    test_dataset = CustomDataset(test_transform)
+    index = 0
+    for label_dir in os.listdir(root_dir):
+        # get each label dir
+        if label_dir[0] == '.':
+            continue
+        label_dir_path = os.path.join(root_dir, label_dir)
+        if os.path.isdir(label_dir_path):
+            # get all image under this label
+            image_names = [f for f in os.listdir(label_dir_path) if os.path.isfile(os.path.join(label_dir_path, f))]
+            val_images = random.sample(image_names, int(len(image_names) * 0.2))
+
+            for image_name in image_names:
+                image_path = os.path.join(label_dir_path, image_name)
+                if image_name in val_images:
+                    test_dataset.image_paths.append(image_path)
+                    test_dataset.labels.append(index)
+                else:
+                    train_dataset.image_paths.append(image_path)
+                    train_dataset.labels.append(index)
+        index += 1
+    
     return train_dataset, test_dataset
 
 
@@ -80,6 +89,7 @@ def build_transform(is_train):
             re_count=1,
             interpolation='bicubic',
         )
+        return transform
 
     t = []
     size = int((256 / 224) * 224)
